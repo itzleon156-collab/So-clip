@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>YouTube Clipper AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+            padding-bottom: 120px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            font-size: 26px;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #a4b0be;
+            font-size: 14px;
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-badge.online {
+            background: rgba(46, 213, 115, 0.2);
+            color: #2ed573;
+        }
+
+        .status-badge.offline {
+            background: rgba(255, 71, 87, 0.2);
+            color: #ff4757;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .online .status-dot { background: #2ed573; }
+        .offline .status-dot { background: #ff4757; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.9); }
+        }
+
+        /* Cards */
+        .card {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(10px);
+        }
+
+        .card h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Inputs */
+        .input-group {
+            margin-bottom: 12px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            color: #a4b0be;
+            margin-bottom: 6px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #ff6b6b;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .input-group input::placeholder {
+            color: #57606f;
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: #fff;
+        }
+
+        .btn-ai {
+            background: linear-gradient(135deg, #a55eea, #8854d0);
+            color: #fff;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #2ed573, #26de81);
+            color: #fff;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        /* Video Preview */
+        .video-preview {
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .video-preview.show {
+            display: block;
+        }
+
+        .video-preview img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .video-info {
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .video-info h3 {
+            font-size: 14px;
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+
+        .video-info p {
+            font-size: 12px;
+            color: #a4b0be;
+        }
+
+        /* Highlights */
+        .highlights-list {
+            margin-top: 15px;
+        }
+
+        .highlight-item {
+            background: rgba(165, 94, 234, 0.1);
+            border: 1px solid rgba(165, 94, 234, 0.3);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .highlight-item:hover {
+            background: rgba(165, 94, 234, 0.2);
+            transform: translateX(5px);
+        }
+
+        .highlight-item.selected {
+            border-color: #2ed573;
+            background: rgba(46, 213, 115, 0.1);
+        }
+
+        .highlight-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .highlight-title {
+            font-size: 14px;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .highlight-score {
+            background: linear-gradient(135deg, #feca57, #ff9f43);
+            color: #000;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .highlight-time {
+            font-size: 12px;
+            color: #a55eea;
+            margin-bottom: 6px;
+        }
+
+        .highlight-reason {
+            font-size: 12px;
+            color: #a4b0be;
+            line-height: 1.4;
+        }
+
+        /* Clips List */
+        .clip-item {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .clip-info h4 {
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .clip-info p {
+            font-size: 12px;
+            color: #a4b0be;
+        }
+
+        .btn-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, #2ed573, #26de81);
+            color: #fff;
+        }
+
+        /* Progress */
+        .progress-container {
+            margin-top: 15px;
+            display: none;
+        }
+
+        .progress-container.show {
+            display: block;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s;
+            width: 0%;
+        }
+
+        .progress-fill.analyzing {
+            background: linear-gradient(90deg, #a55eea, #8854d0);
+        }
+
+        .progress-fill.creating {
+            background: linear-gradient(90deg, #ff6b6b, #feca57);
+        }
+
+        .progress-text {
+            font-size: 13px;
+            color: #a4b0be;
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        /* Messages */
+        .message {
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-top: 12px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.error {
+            background: rgba(255, 71, 87, 0.15);
+            border: 1px solid rgba(255, 71, 87, 0.3);
+            color: #ff6b6b;
+        }
+
+        .message.success {
+            background: rgba(46, 213, 115, 0.15);
+            border: 1px solid rgba(46, 213, 115, 0.3);
+            color: #2ed573;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #57606f;
+        }
+
+        .empty-state span {
+            font-size: 40px;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        /* Spinner */
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 400px) {
+            body { padding: 12px; }
+            .card { padding: 16px; }
+            .input-row { grid-template-columns: 1fr; }
+            .btn-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎬 YouTube Clipper AI</h1>
+            <p>KI-gestützte Clip-Erstellung</p>
+            <div class="status-row">
+                <div id="backendStatus" class="status-badge offline">
+                    <div class="status-dot"></div>
+                    <span>Backend</span>
+                </div>
+                <div id="aiStatus" class="status-badge offline">
+                    <div class="status-dot"></div>
+                    <span>KI</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- URL Input -->
+        <div class="card">
+            <h2>📎 YouTube Video</h2>
+            <div class="input-group">
+                <input type="text" id="videoUrl" placeholder="https://youtube.com/watch?v=...">
+            </div>
+            <button class="btn btn-primary" id="loadBtn" onclick="loadVideo()">
+                🔍 Video laden
+            </button>
+            
+            <div class="video-preview" id="videoPreview">
+                <img id="thumbnail" src="" alt="">
+                <div class="video-info">
+                    <h3 id="videoTitle"></h3>
+                    <p id="videoMeta"></p>
+                </div>
+            </div>
+            
+            <div id="loadError" class="message error"></div>
+        </div>
+
+        <!-- AI Analysis -->
+        <div class="card" id="aiCard" style="display: none;">
+            <h2>🤖 KI-Analyse</h2>
+            <p style="font-size: 13px; color: #a4b0be; margin-bottom: 12px;">
+                Die KI analysiert das Video und findet die besten Clip-Momente.
+            </p>
+            <button class="btn btn-ai" id="analyzeBtn" onclick="analyzeVideo()">
+                🧠 Video analysieren
+            </button>
+            
+            <div class="progress-container" id="analyzeProgress">
+                <div class="progress-bar">
+                    <div class="progress-fill analyzing" id="analyzeFill"></div>
+                </div>
+                <p class="progress-text" id="analyzeText">Starte Analyse...</p>
+            </div>
+
+            <div class="highlights-list" id="highlightsList"></div>
+            
+            <div id="analyzeError" class="message error"></div>
+        </div>
+
+        <!-- Manual Clip -->
+        <div class="card" id="manualCard" style="display: none;">
+            <h2>✂️ Clip erstellen</h2>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Startzeit (Sek.)</label>
+                    <input type="number" id="startTime" value="0" min="0">
+                </div>
+                <div class="input-group">
+                    <label>Dauer (Sek.)</label>
+                    <input type="number" id="duration" value="30" min="5" max="300">
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Clip-Name</label>
+                <input type="text" id="clipName" placeholder="Mein Clip">
+            </div>
+            <button class="btn btn-success" id="createBtn" onclick="createClip()">
+                ✂️ Clip erstellen
+            </button>
+            
+            <div class="progress-container" id="createProgress">
+                <div class="progress-bar">
+                    <div class="progress-fill creating" id="createFill"></div>
+                </div>
+                <p class="progress-text" id="createText">Erstelle Clip...</p>
+            </div>
+            
+            <div id="createSuccess" class="message success"></div>
+            <div id="createError" class="message error"></div>
+        </div>
+
+        <!-- Clips List -->
+        <div class="card">
+            <h2>📁 Meine Clips</h2>
+            <div id="clipsList">
+                <div class="empty-state">
+                    <span>📭</span>
+                    <p>Noch keine Clips</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // STATE
+        // ============================================
+        const API = window.location.origin;
+        let backendOnline = false;
+        let aiEnabled = false;
+        let currentVideo = null;
+        let highlights = [];
+        let clips = JSON.parse(localStorage.getItem('clips') || '[]');
+
+        // ============================================
+        // INIT
+        // ============================================
+        async function init() {
+            await checkStatus();
+            renderClips();
+            setInterval(checkStatus, 30000);
+        }
+
+        async function checkStatus() {
+            try {
+                const res = await fetch(`${API}/api/health`);
+                const data = await res.json();
+                
+                backendOnline = data.status === 'online';
+                aiEnabled = data.ai === 'enabled';
+                
+                updateStatus('backendStatus', backendOnline, 'Backend');
+                updateStatus('aiStatus', aiEnabled, 'KI');
+            } catch {
+                backendOnline = false;
+                aiEnabled = false;
+                updateStatus('backendStatus', false, 'Backend');
+                updateStatus('aiStatus', false, 'KI');
+            }
+        }
+
+        function updateStatus(id, online, label) {
+            const el = document.getElementById(id);
+            el.className = `status-badge ${online ? 'online' : 'offline'}`;
+            el.querySelector('span').textContent = label + (online ? ' ✓' : ' ✗');
+        }
+
+        // ============================================
+        // LOAD VIDEO
+        // ============================================
+        async function loadVideo() {
+            const url = document.getElementById('videoUrl').value.trim();
+            const btn = document.getElementById('loadBtn');
+            
+            hideMessage('loadError');
+            
+            if (!url) {
+                showMessage('loadError', 'Bitte URL eingeben', 'error');
+                return;
+            }
+
+            if (!backendOnline) {
+                showMessage('loadError', 'Backend offline', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> Laden...';
+
+            try {
+                const res = await fetch(`${API}/api/video-info`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                
+                const data = await res.json();
+                
+                if (!res.ok) throw new Error(data.error);
+                
+                currentVideo = { ...data, url };
+                
+                document.getElementById('thumbnail').src = data.thumbnail;
+                document.getElementById('videoTitle').textContent = data.title;
+                document.getElementById('videoMeta').textContent = 
+                    `${data.author} • ${formatDuration(data.duration)}`;
+                
+                document.getElementById('videoPreview').classList.add('show');
+                document.getElementById('aiCard').style.display = 'block';
+                document.getElementById('manualCard').style.display = 'block';
+                
+                document.getElementById('clipName').value = 
+                    data.title.substring(0, 25).replace(/[^a-zA-Z0-9 ]/g, '');
+                
+            } catch (err) {
+                showMessage('loadError', err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🔍 Video laden';
+            }
+        }
+
+        // ============================================
+        // AI ANALYSIS
+        // ============================================
+        async function analyzeVideo() {
+            if (!currentVideo) return;
+            if (!aiEnabled) {
+                showMessage('analyzeError', 'KI nicht verfügbar', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('analyzeBtn');
+            const progress = document.getElementById('analyzeProgress');
+            const fill = document.getElementById('analyzeFill');
+            const text = document.getElementById('analyzeText');
+            
+            hideMessage('analyzeError');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> Analysiere...';
+            progress.classList.add('show');
+            
+            // Progress Animation
+            let p = 0;
+            const steps = [
+                { p: 20, t: '🎵 Extrahiere Audio...' },
+                { p: 50, t: '🎤 Transkribiere...' },
+                { p: 80, t: '🧠 KI analysiert...' },
+            ];
+            let step = 0;
+            
+            const interval = setInterval(() => {
+                if (step < steps.length) {
+                    fill.style.width = steps[step].p + '%';
+                    text.textContent = steps[step].t;
+                    step++;
+                }
+            }, 3000);
+
+            try {
+                const res = await fetch(`${API}/api/analyze-video`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: currentVideo.url })
+                });
+                
+                const data = await res.json();
+                clearInterval(interval);
+                
+                if (!res.ok) throw new Error(data.error);
+                
+                fill.style.width = '100%';
+                text.textContent = '✅ Analyse abgeschlossen!';
+                
+                highlights = data.highlights || [];
+                renderHighlights();
+                
+            } catch (err) {
+                clearInterval(interval);
+                progress.classList.remove('show');
+                showMessage('analyzeError', err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🧠 Video analysieren';
+            }
+        }
+
+        function renderHighlights() {
+            const container = document.getElementById('highlightsList');
+            
+            if (highlights.length === 0) {
+                container.innerHTML = '<p style="color: #a4b0be; font-size: 13px; text-align: center; padding: 20px;">Keine Highlights gefunden</p>';
+                return;
+            }
+            
+            container.innerHTML = highlights.map((h, i) => `
+                <div class="highlight-item" onclick="selectHighlight(${i})">
+                    <div class="highlight-header">
+                        <span class="highlight-title">${h.title}</span>
+                        <span class="highlight-score">${h.score}%</span>
+                    </div>
+                    <div class="highlight-time">⏱️ ${formatDuration(h.start)} - ${formatDuration(h.end)}</div>
+                    <div class="highlight-reason">${h.reason}</div>
+                </div>
+            `).join('');
+        }
+
+        function selectHighlight(index) {
+            const h = highlights[index];
+            document.getElementById('startTime').value = h.start;
+            document.getElementById('duration').value = h.end - h.start;
+            document.getElementById('clipName').value = h.title.substring(0, 25);
+            
+            // Visual feedback
+            document.querySelectorAll('.highlight-item').forEach((el, i) => {
+                el.classList.toggle('selected', i === index);
+            });
+            
+            // Scroll to clip section
+            document.getElementById('manualCard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // ============================================
+        // CREATE CLIP
+        // ============================================
+        async function createClip() {
+            if (!currentVideo) return;
+
+            const startTime = parseInt(document.getElementById('startTime').value) || 0;
+            const duration = parseInt(document.getElementById('duration').value) || 30;
+            const clipName = document.getElementById('clipName').value.trim() || 'Clip';
+            
+            const btn = document.getElementById('createBtn');
+            const progress = document.getElementById('createProgress');
+            const fill = document.getElementById('createFill');
+            const text = document.getElementById('createText');
+            
+            hideMessage('createError');
+            hideMessage('createSuccess');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> Erstelle...';
+            progress.classList.add('show');
+            fill.style.width = '0%';
+            
+            // Progress Animation
+            let p = 0;
+            const interval = setInterval(() => {
+                if (p < 90) {
+                    p += Math.random() * 10;
+                    fill.style.width = Math.min(p, 90) + '%';
+                    
+                    if (p < 30) text.textContent = '📥 Lade Video...';
+                    else if (p < 60) text.textContent = '✂️ Schneide Clip...';
+                    else text.textContent = '💾 Finalisiere...';
+                }
+            }, 500);
+
+            try {
+                const res = await fetch(`${API}/api/create-clip`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        url: currentVideo.url,
+                        startTime,
+                        duration,
+                        clipName
+                    })
+                });
+                
+                const data = await res.json();
+                clearInterval(interval);
+                
+                if (!res.ok) throw new Error(data.error);
+                
+                fill.style.width = '100%';
+                text.textContent = '✅ Fertig!';
+                
+                // Add to clips
+                const newClip = {
+                    id: Date.now(),
+                    name: clipName,
+                    duration,
+                    downloadUrl: data.downloadUrl,
+                    createdAt: new Date().toISOString()
+                };
+                clips.unshift(newClip);
+                localStorage.setItem('clips', JSON.stringify(clips));
+                renderClips();
+                
+                showMessage('createSuccess', 
+                    `✅ Clip erstellt! <a href="${data.downloadUrl}" download style="color: #2ed573;">Herunterladen</a>`, 
+                    'success'
+                );
+                
+            } catch (err) {
+                clearInterval(interval);
+                progress.classList.remove('show');
+                showMessage('createError', err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '✂️ Clip erstellen';
+            }
+        }
+
+        // ============================================
+        // CLIPS LIST
+        // ============================================
+        function renderClips() {
+            const container = document.getElementById('clipsList');
+            
+            if (clips.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <span>📭</span>
+                        <p>Noch keine Clips</p>
+                    </div>`;
+                return;
+            }
+            
+            container.innerHTML = clips.slice(0, 10).map(c => `
+                <div class="clip-item">
+                    <div class="clip-info">
+                        <h4>${c.name}</h4>
+                        <p>${c.duration}s • ${new Date(c.createdAt).toLocaleTimeString('de')}</p>
+                    </div>
+                    <a href="${c.downloadUrl}" download class="btn-icon btn-download">⬇️</a>
+                </div>
+            `).join('');
+        }
+
+        // ============================================
+        // HELPERS
+        // ============================================
+        function formatDuration(sec) {
+            const m = Math.floor(sec / 60);
+            const s = Math.floor(sec % 60);
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function showMessage(id, html, type) {
+            const el = document.getElementById(id);
+            el.innerHTML = html;
+            el.className = `message ${type} show`;
+        }
+
+        function hideMessage(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+
+        // Start
+        init();
+    </script>
+</body>
+</html>
